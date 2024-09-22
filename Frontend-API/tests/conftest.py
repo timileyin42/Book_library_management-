@@ -30,8 +30,8 @@ def init_database(app):
     """Initialize the database with some default values."""
     with app.app_context():
         # Create default test users
-        user1 = User(email="john.doe@example.com", first_name="John", last_name="Doe")
-        user2 = User(email="jane.smith@example.com", first_name="Jane", last_name="Smith")
+        user1 = User(email="test.it@example.com", first_name="Test", last_name="IT")
+        user2 = User(email="new.testh@example.com", first_name="New", last_name="Test")
         db.session.add_all([user1, user2])
         
         # Create default test books

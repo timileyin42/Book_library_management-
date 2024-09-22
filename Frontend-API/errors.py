@@ -2,6 +2,8 @@ from flask import jsonify
 from werkzeug.exceptions import HTTPException
 
 def register_error_handlers(app):
+    """Register global error handlers for the Flask app."""
+
     @app.errorhandler(HTTPException)
     def handle_http_exception(e):
         response = e.get_response()

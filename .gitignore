@@ -1,0 +1,17 @@
+# .gitignore
+
+# Ignore environment variables files
+.env
+
+# Other files and directories to ignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+

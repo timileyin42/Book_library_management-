@@ -130,8 +130,8 @@ def test_create_user_invalid_json(client):
     # Sending data as form data instead of JSON
     response = client.post('/users', data={
         'email': 'formdata@example.com',
-        'first_name': 'Form',
-        'last_name': 'Data'
+        'first_name': 'jonathan',
+        'last_name': 'David'
     })
     assert response.status_code == 400
     data = response.get_json()
@@ -156,7 +156,7 @@ def test_create_user_invalid_email_domain(client):
     response = client.post('/users', json={
         'email': 'user@invalid_domain',
         'first_name': 'User',
-        'last_name': 'InvalidDomain'
+        'last_name': 'InvalidUser'
     })
     assert response.status_code == 400
     data = response.get_json()

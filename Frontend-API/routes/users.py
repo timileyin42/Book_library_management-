@@ -11,6 +11,8 @@ users_schema = UserSchema(many=True)
 logger = logging.getLogger(__name__)
 
 class UserListResource(Resource):
+    """Resource to handle user operations."""
+
     def post(self):
         json_data = request.get_json()
         if not json_data:
@@ -41,3 +43,7 @@ class UserListResource(Resource):
         logger.info(f"Created new user: {new_user.email} (ID: {new_user.id})")
         return user_schema.dump(new_user), 201
 
+    def get(self):
+        """List all enrolled users."""
+        users = User.query.all()
+        return users_schema.dump(users), 200

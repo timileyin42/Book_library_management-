@@ -1,6 +1,6 @@
-# frontend_api/Dockerfile
+# Backend-API/Dockerfile
 
-# Use official Python image as base
+# Use an official Python runtime as a parent image
 FROM python:3.11-slim
 
 # Set environment variables
@@ -27,7 +27,7 @@ COPY . .
 RUN mkdir -p logs
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8001
 
 # Define environment variable for Flask
 ENV FLASK_APP=app.py

@@ -27,3 +27,8 @@ class Book(db.Model):
     def __repr__(self):
         return f'<Book {self.title} by {self.author}>'
 
+    def borrow(self, user_id, days):
+        """Mark the book as borrowed by a user."""
+        self.available = False
+        self.borrowed_by = user_id
+        self.borrowed_until = datetime.utcnow().date() + timedelta(days=days)

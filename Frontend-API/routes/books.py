@@ -1,79 +1,137 @@
+# frontend_api/routes/books.py
+
+from flask import request, jsonify
 from flask_restful import Resource
 from models import Book, User
 from app import db
 from schemas import BookSchema
-from datetime import datetime, timedelta
-from werkzeug.exceptions import BadRequest, NotFound, Conflict
 from marshmallow import ValidationError
-import logging
+from datetime import datetime, timedelta
+import os
+import requests
 
 book_schema = BookSchema()
 books_schema = BookSchema(many=True)
 
-logger = logging.getLogger(__name__)
-
 class BookListResource(Resource):
+    """Resource to handle book operations."""
+
     def get(self):
-        publisher = request.args.get('publisher', type=str)
-        category = request.args.get('category', type=str)
-        
-        query = Book.query.filter_by(available=True)
-        
-        if publisher:
-            query = query.filter(Book.publisher.ilike(f"%{publisher}%"))
-        if category:
-            query = query.filter(Book.category.ilike(f"%{category}%"))
-        
-        books = query.all()
-        logger.info(f"Listed {len(books)} books with filters: publisher={publisher}, category={category}")
+        """List all available books."""
+        books = Book.query.filter_by(available=True).all()
         return books_schema.dump(books), 200
 
-class BookResource(Resource):
-    def get(self, book_id):
-        book = Book.query.filter_by(id=book_id, available=True).first()
-        if not book:
-            logger.warning(f"Book with ID {book_id} not found or not available")
-            raise NotFound(description="Book not found or not available")
-        logger.info(f"Retrieved book: {book.title} (ID: {book.id})")
-        return book_schema.dump(book), 200
-
-class BookBorrowResource(Resource):
-    def post(self, book_id):
+    def post(self):
+        """Add a new book to the catalogue."""
         json_data = request.get_json()
         if not json_data:
-            logger.warning("No input data provided for borrowing a book")
-            raise BadRequest(description="No input data provided")
-        
-        # Define a BorrowSchema for input validation
-        class BorrowSchema(ma.Schema):
-            user_id = fields.Str(required=True)
-            days = fields.Int(required=True, validate=validate.Range(min=1, max=365))
-        
-        borrow_schema = BorrowSchema()
-        
+            return {"message": "No input data provided"}, 400
+
         # Validate and deserialize input
         try:
-            data = borrow_schema.load(json_data)
+            data = book_schema.load(json_data)
         except ValidationError as err:
-            logger.warning(f"Validation error during book borrowing: {err.messages}")
-            raise BadRequest(description=err.messages)
-        
-        book = Book.query.filter_by(id=book_id, available=True).first()
-        if not book:
-            logger.warning(f"Attempt to borrow unavailable or non-existent book ID: {book_id}")
-            raise Conflict(description="Book not available for borrowing")
-        
-        user = User.query.filter_by(id=data['user_id']).first()
+            return {"message": err.messages}, 400
+
+        # Create new book
+        book = Book(**data)
+        db.session.add(book)
+        db.session.commit()
+
+        # Notify Backend API about the new book (if needed)
+        backend_api_url = os.getenv('BACKEND_API_URL', 'http://backend_api:8001/books/update')
+        try:
+            requests.post(backend_api_url, json=book_schema.dump(book))
+        except requests.exceptions.RequestException as e:
+            app.logger.error(f"Failed to notify Backend API: {e}")
+
+        return book_schema.dump(book), 201
+
+class BookResource(Resource):
+    """Resource for a single book."""
+
+    def get(self, book_id):
+        """Retrieve a single book by ID."""
+        book = Book.query.get_or_404(book_id)
+        return book_schema.dump(book), 200
+
+    def delete(self, book_id):
+        """Remove a book from the catalogue."""
+        book = Book.query.get_or_404(book_id)
+        db.session.delete(book)
+        db.session.commit()
+        return {"message": "Book deleted successfully"}, 204
+
+class BookBorrowResource(Resource):
+    """Resource for borrowing a book."""
+
+    def post(self, book_id):
+        """Borrow a book."""
+        book = Book.query.get_or_404(book_id)
+        if not book.available:
+            return {"message": "Book not available for borrowing"}, 400
+
+        json_data = request.get_json()
+        if not json_data:
+            return {"message": "No input data provided"}, 400
+
+        user_id = json_data.get('user_id')
+        days = json_data.get('days', 14)  # Default to 14 days if not specified
+
+        if not user_id:
+            return {"message": "User ID is required"}, 400
+
+        # Validate user exists
+        user = User.query.get(user_id)
         if not user:
-            logger.warning(f"Attempt to borrow book with invalid user ID: {data['user_id']}")
-            raise NotFound(description="User not found")
-        
+            return {"message": "User not found"}, 404
+
         # Update book status
         book.available = False
         book.borrowed_by = user.id
-        book.borrowed_until = datetime.utcnow().date() + timedelta(days=data['days'])
+        book.borrowed_until = datetime.utcnow().date() + timedelta(days=days)
         db.session.commit()
-        
-        logger.info(f"Book ID {book.id} borrowed by User ID {user.id} until {book.borrowed_until}")
-        return {'message': f'Book borrowed until {book.borrowed_until}'}, 200
+
+        # Notify Backend API about the borrowing event (if needed)
+        backend_api_url = os.getenv('BACKEND_API_URL', 'http://backend_api:8001/books/update')
+        try:
+            requests.post(backend_api_url, json=book_schema.dump(book))
+        except requests.exceptions.RequestException as e:
+            app.logger.error(f"Failed to notify Backend API: {e}")
+
+        return {"message": f"Book borrowed until {book.borrowed_until}"}, 200
+
+class BookUpdateResource(Resource):
+    """Resource to handle book updates from the Backend API."""
+
+    def post(self):
+        """Receive updates about books."""
+        json_data = request.get_json()
+        if not json_data:
+            return {"message": "No input data provided"}, 400
+
+        # Validate and deserialize input
+        try:
+            data = book_schema.load(json_data)
+        except ValidationError as err:
+            return {"message": err.messages}, 400
+
+        # Update or add the book in the frontend database
+        book = Book.query.get(data['id'])
+        if book:
+            # Update existing book
+            book.title = data['title']
+            book.author = data['author']
+            book.publisher = data['publisher']
+            book.category = data['category']
+            book.available = data['available']
+            book.borrowed_by = data.get('borrowed_by')
+            book.borrowed_until = data.get('borrowed_until')
+        else:
+            # Add new book
+            new_book = Book(**data)
+            db.session.add(new_book)
+
+        db.session.commit()
+        return {"message": "Book updated successfully"}, 200
 

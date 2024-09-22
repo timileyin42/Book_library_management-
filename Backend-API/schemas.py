@@ -1,8 +1,9 @@
-# frontend_api/schemas.py
+# backend_api/schemas.py
 
 from app import ma
 from models import User, Book
-from marshmallow import fields, validate
+from marshmallow import fields, validate, ValidationError, validates
+import re
 
 class UserSchema(ma.SQLAlchemyAutoSchema):
     """Schema for serializing and deserializing User model data."""
@@ -16,6 +17,7 @@ class UserSchema(ma.SQLAlchemyAutoSchema):
     email = fields.Email(required=True, validate=validate.Length(max=120))
     first_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
     last_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
+
     @validates('email')
     def validate_email(self, value):
         """Additional email format validation."""
@@ -37,6 +39,6 @@ class BookSchema(ma.SQLAlchemyAutoSchema):
     publisher = fields.Str(required=True, validate=validate.Length(min=1, max=100))
     category = fields.Str(required=True, validate=validate.Length(min=1, max=50))
     available = fields.Boolean(required=True)
-    borrowed_by = fields.Str(allow_none=True)  # Can be None if the book is not borrowed
-    borrowed_until = fields.Date(allow_none=True)  # Can be None if the book is available
+    borrowed_by = fields.Int(allow_none=True)  # Assuming user IDs are integers
+    borrowed_until = fields.Date(allow_none=True)
 

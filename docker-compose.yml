@@ -1,0 +1,68 @@
+# docker-compose.yml
+
+version: '3.8'
+
+services:
+  # Frontend API Service
+  frontend_api:
+    build: ./Frontend-API
+    ports:
+      - "8000:8000"
+    environment:
+      - FLASK_ENV=${FRONTEND_FLASK_ENV}
+      - DATABASE_URI=${FRONTEND_DATABASE_URI}
+    depends_on:
+      - frontend_db
+    networks:
+      - app-network
+
+  # Frontend PostgreSQL Database
+  frontend_db:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: frontend_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - frontend_db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # Backend/Admin API Service
+  backend_api:
+    build: ./Backend-API
+    ports:
+      - "8001:8001"
+    environment:
+      - FLASK_ENV=${BACKEND_FLASK_ENV}
+      - DATABASE_URI=${BACKEND_DATABASE_URI}
+      - FRONTEND_API_URL=${FRONTEND_API_URL}
+    depends_on:
+      - backend_db
+    networks:
+      - app-network
+
+  # Backend PostgreSQL Database
+  backend_db:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: backend_db
+    ports:
+      - "5433:5432" # Different host port to avoid conflict with frontend_db
+    volumes:
+      - backend_db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  frontend_db_data:
+  backend_db_data:
+
