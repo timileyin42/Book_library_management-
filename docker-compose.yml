@@ -62,10 +62,35 @@ services:
     volumes:
       - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
       - ./logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
-      - ./frontend_api/logs:/usr/share/logstash/logs/frontend  # Separate log directory for frontend
-      - ./backend_api/logs:/usr/share/logstash/logs/backend  # Separate log directory for backend
+      - ./Frontend-API/logs:/usr/share/logstash/logs/frontend  # Separate log directory for frontend
+      - ./Backend-API/logs:/usr/share/logstash/logs/backend    # Separate log directory for backend
     ports:
       - "5044:5044"
+    depends_on:
+      - elasticsearch
+    networks:
+      - app-network
+
+  # Elasticsearch Service
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.1
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    networks:
+      - app-network
+
+  # Kibana Service
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.10.1
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
     networks:
       - app-network
 

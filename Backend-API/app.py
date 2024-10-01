@@ -6,8 +6,13 @@ from flask_marshmallow import Marshmallow
 from flask_cors import CORS
 import logging
 from logging.handlers import RotatingFileHandler
+from dotenv import load_dotenv
 
 from errors import register_error_handlers
+
+
+load_dotenv()
+
 
 db = SQLAlchemy()
 ma = Marshmallow()
@@ -20,8 +25,10 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # Initialize Extensions
-    db.init_app(app)
-    ma.init_app(app)
+    db.init_app(app)  # Initialize SQLAlchemy first
+    print("SQLAlchemy initialized")  # Debug line
+    ma.init_app(app)  # Initialize Marshmallow after SQLAlchemy
+    print("Marshmallow initialized")  # Debug line
 
     # Enable CORS
     CORS(app)

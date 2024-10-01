@@ -6,6 +6,8 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
+    
+    # Relationship to Book model
     borrowed_books = db.relationship('Book', backref='borrower', lazy=True)
 
 class Book(db.Model):
@@ -15,6 +17,8 @@ class Book(db.Model):
     publisher = db.Column(db.String(100), nullable=False)
     category = db.Column(db.String(50), nullable=False)
     available = db.Column(db.Boolean, default=True)
+
+    # ForeignKey to User model
     borrowed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     borrowed_until = db.Column(db.Date, nullable=True)
 

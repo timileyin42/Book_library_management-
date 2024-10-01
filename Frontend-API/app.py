@@ -20,7 +20,10 @@ def create_app():
     app = Flask(__name__)
 
     # Database Configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'postgresql://user:password@localhost:5432/frontend_db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+        'DATABASE_URI', 
+        'postgresql://user:password@localhost:5432/frontend_db'
+    )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # Initialize Extensions
@@ -40,7 +43,7 @@ def create_app():
     api = Api(app)
     register_routes(api)
 
-    # Create Database Tables
+    # Create Database Tables if they don't exist
     with app.app_context():
         db.create_all()
 
@@ -48,9 +51,14 @@ def create_app():
 
 def setup_logging(app):
     """Set up logging configuration."""
-    if not os.path.exists('logs'):
-        os.mkdir('logs')
-    file_handler = RotatingFileHandler('logs/frontend_api.log', maxBytes=10240, backupCount=10)
+    log_directory = 'logs'
+    if not os.path.exists(log_directory):
+        os.makedirs(log_directory)  # Use makedirs for potential nested directories
+    file_handler = RotatingFileHandler(
+        os.path.join(log_directory, 'frontend_api.log'), 
+        maxBytes=10240, 
+        backupCount=10
+    )
     file_handler.setFormatter(logging.Formatter(
         '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
     ))

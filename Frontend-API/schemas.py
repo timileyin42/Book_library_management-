@@ -1,42 +1,29 @@
-# frontend_api/schemas.py
+# schemas.py
 
-from app import ma
+from marshmallow import fields, validate, ValidationError, validates
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from models import User, Book
-from marshmallow import fields, validate
+from app import ma  # Ensure this import is present
 
-class UserSchema(ma.SQLAlchemyAutoSchema):
-    """Schema for serializing and deserializing User model data."""
-    
+class UserSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = User
-        include_fk = True
-        load_instance = True
-        fields = ('id', 'email', 'first_name', 'last_name', 'borrowed_books')
+        include_fk = True  # This allows for foreign key fields to be included
 
     email = fields.Email(required=True, validate=validate.Length(max=120))
-    first_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
-    last_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
-    @validates('email')
+
+    @validates('email')  # Use the imported validates
     def validate_email(self, value):
-        """Additional email format validation."""
-        email_regex = r'^\S+@\S+\.\S+$'
-        if not re.match(email_regex, value):
+        if '@' not in value:
             raise ValidationError('Invalid email format.')
 
-class BookSchema(ma.SQLAlchemyAutoSchema):
-    """Schema for serializing and deserializing Book model data."""
-    
+class BookSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Book
-        include_fk = True
-        load_instance = True
-        fields = ('id', 'title', 'author', 'publisher', 'category', 'available', 'borrowed_by', 'borrowed_until')
+        include_fk = True  # This allows for foreign key fields to be included
 
-    title = fields.Str(required=True, validate=validate.Length(min=1, max=200))
-    author = fields.Str(required=True, validate=validate.Length(min=1, max=100))
-    publisher = fields.Str(required=True, validate=validate.Length(min=1, max=100))
-    category = fields.Str(required=True, validate=validate.Length(min=1, max=50))
-    available = fields.Boolean(required=True)
-    borrowed_by = fields.Str(allow_none=True)  # Can be None if the book is not borrowed
-    borrowed_until = fields.Date(allow_none=True)  # Can be None if the book is available
+    title = fields.String(required=True, validate=validate.Length(max=200))
+    author = fields.String(required=True, validate=validate.Length(max=100))
+    published_date = fields.Date()
+    isbn = fields.String(validate=validate.Length(equal=13))  # Assuming ISBN is a 13-digit number
 
